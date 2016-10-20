@@ -33,8 +33,3 @@ def forwardChaining(KB, q):
                     agenda.add(j[1])
     return False
 
-skb = [(tuple(),'a'),(tuple(),'b'),(('a','b'),'m'),(('a','l'),'m'),
-        (('m','l'), 'p'), (('p',),'q')
-       ]
-okb = [(('p',),'q'), (('a','l'),'p'),(('b','m'),'l'),(('a','p'),'m'),(('a','b'),'m'),(tuple(),'a'),(tuple(),'b')]
-print(forwardChaining(okb, 'q'))
