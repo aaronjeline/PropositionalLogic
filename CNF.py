@@ -9,7 +9,9 @@ class operators(Enum):
 
 class Clause:
     contents = None
-    def __init__(self, contents):
+    awaitingNegation = None
+    def __init__(self, contents, awaitingNegation=False):
+        self.awaitingNegation = awaitingNegation
         self.contents = contents
 
     def toLiteral(self):
@@ -21,6 +23,8 @@ class Clause:
             #It's a literal
             symbol = newContents[0]
             sign = len(nots) % 2 == 0
+            if self.awaitingNegation:
+                sign = not sign
             return Literal(symbol, sign)
         else:
             return self
