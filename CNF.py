@@ -1,4 +1,6 @@
 from enum import Enum
+class ConversionError(Exception):
+    pass
 
 class operators(Enum):
     AND = 0
@@ -6,6 +8,12 @@ class operators(Enum):
     NOT = 2
     IMPLIES = 3
     EQUALS = 4
+
+def conversion(item):
+    if isinstance(item, Clause):
+        return item.toCNF()
+    else:
+        return item
 
 class Clause:
     contents = None
@@ -29,21 +37,26 @@ class Clause:
         else:
             return self
     def toCNF(self):
-        isCNF = map(lambda x: isinstance(x, CNFClause) or x==operators.OR, self.contents)
-        if all(isCNF):
-            return CNFClause(contents=self.contents)
-        else:
-            return self
+        #Simple check to see if we are a literal
+        literal = self.toLiteral()
+        if isinstance(literal, Literal):
+            return literal
+        #Now we have more work to do
+        #Convert all sub-clauses to CNF (yay recursion)
+        newContents = list(map(lambda x:conversion(x),self.contents))
+        #If we have only ANDs of CNF clauses, then we are done
+        onlyAnds = all(map(lambda x: x==operators.AND, filter(lambda y: isinstance(y, operators), newContents)))
+        if onlyAnds:
+            return newContents
+        
+
 
     def negate(self):
         self.awaitingNegation = not self.awaitingNegation
 
 class CNFClause(Clause):
     #A marked, valid clause in CNF
-    def negate(self):
-        ands = []
-        for i in self.contents:
-
+    pass
 
 class Literal(CNFClause):
     symbol = None
@@ -55,28 +68,9 @@ class Literal(CNFClause):
     def negate(self):
         return Literal(self.symbol, not self.sign)
 
-def impliesReduction(implactingClause):
 
-
-reductionLaws = {
-
-}
-
-def toCNF(phrase):
-    #Phrase is a list of clauses seperated by AND statements
-    if len(phrase) == 1:
-        working = phrase[0]
-        #Try to convert working to a literal
-        working = working.toLiteral()
-        if isinstance(working,Literal):
-            return working
-        #Otherwise we have to break down the operators
-    else:
-        #Reduce all sub-clauses to CNF
-        print(list(map(lambda x: toCNF([x]), phrase)))
 
 
 
 simpleLiteralClause = [Clause(['a']), Clause(['b'])]
-print(toCNF(simpleLiteralClause))
 
