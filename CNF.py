@@ -1,6 +1,4 @@
 from enum import Enum
-class ConversionError(Exception):
-    pass
 
 class operators(Enum):
     AND = 0
@@ -14,6 +12,9 @@ def conversion(item):
         return item.toCNF()
     else:
         return item
+
+
+
 
 class Clause:
     contents = None
@@ -38,25 +39,69 @@ class Clause:
             return self
     def toCNF(self):
         #Simple check to see if we are a literal
-        literal = self.toLiteral()
-        if isinstance(literal, Literal):
-            return literal
+        if isinstance(self, Literal):
+            return self
         #Now we have more work to do
         #Convert all sub-clauses to CNF (yay recursion)
         newContents = list(map(lambda x:conversion(x),self.contents))
         #If we have only ANDs of CNF clauses, then we are done
         onlyAnds = all(map(lambda x: x==operators.AND, filter(lambda y: isinstance(y, operators), newContents)))
         if onlyAnds:
-            return newContents
-        
+            return  CNFClause(newContents)
+        #If the statement is composed of only ORs of Literals, then we are done
+        onlyOrs = all(map(lambda x: x==operators.OR, filter(lambda y: isinstance(y,operators), newContents)))
+        onlyLiterals = all(map(lambda x: isinstance(x,Literal), filter(lambda y: isinstance(y,Clause), newContents)))
+        if onlyOrs and onlyLiterals:
+            return CNFClause(newContents)
+        #Now we have to manipulate symbols
+        unresolved = True
+        while unresolved:
+            unresolved = False
+            for i in range(len(newContents)):
+                cur = newContents[i]
+                if isinstance(cur,operators):
+                    unresolved = True
+                    if cur == operators.NOT:
+                        #The unary operator
+                        newContents[i+1] = newContents[i+1].negate()
+                        #Processesed
+                        newContents.pop(i)
+                    else:
+                        #Grab our operands
+                        operands = [newContents.pop(i-1),newContents.pop(i+1)]
+
+
+
+        #Conversion to CNF not possible
+        raise TypeError
+
+
+    def __str__(self):
+        st = ""
+        for i in self.contents:
+            st += str(i)
+        return st
 
 
     def negate(self):
         self.awaitingNegation = not self.awaitingNegation
 
+negationDict = {
+    operators.AND:operators.OR,
+    operators.OR:operators.AND
+}
+
+def negationMapping(i):
+    if isinstance(i,Clause):
+        return i.negate()
+    else:
+        return negationDict[i]
+
 class CNFClause(Clause):
     #A marked, valid clause in CNF
-    pass
+    def negate(self):
+        self.contents = list(map(negationMapping, self.contents))
+
 
 class Literal(CNFClause):
     symbol = None
@@ -68,9 +113,16 @@ class Literal(CNFClause):
     def negate(self):
         return Literal(self.symbol, not self.sign)
 
+    def __str__(self):
+        if self.sign:
+            return self.symbol
+        else:
+            return '-' + self.symbol
 
-
-
-
-simpleLiteralClause = [Clause(['a']), Clause(['b'])]
+a = Literal('a')
+b = Literal('b')
+c = Literal('c')
+level = Clause([b,operators.OR,c])
+topLevel = Clause([a,operators.AND,level])
+print(topLevel.toCNF())
 
