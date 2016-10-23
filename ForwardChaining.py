@@ -1,4 +1,5 @@
 class Agenda:
+    #Simple queue structure that conforms to the Iterable & Iterator interface
     items = None
     def __init__(self, items, key=lambda x:x):
         self.items = list(map(key, items))
@@ -14,9 +15,13 @@ class Agenda:
 
 
 def forwardChaining(KB, q):
+    #Knowledge base is of the form: (P,C) where P is a tuple containing the symbols in the premise, and C is
+    #the symbol in the conclusion
     count = {}
     inferred = {}
+    #Grab the conclusions of the KB entries that have a premise of length 0
     agenda = Agenda(filter(lambda x: len(x[0])==0,KB), key=lambda x:x[1])
+    #Add
     for i in KB:
         count[i] = len(i[0])
         for j in i[0]:

@@ -35,9 +35,14 @@ class Clause:
         else:
             return self
 
+    def negate(self):
+        self.awaitingNegation = not self.awaitingNegation
+
 class CNFClause(Clause):
     #A marked, valid clause in CNF
-    pass
+    def negate(self):
+        ands = []
+        for i in self.contents:
 
 
 class Literal(CNFClause):
