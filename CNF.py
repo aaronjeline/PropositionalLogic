@@ -64,7 +64,7 @@ class Clause:
                     if cur == operators.NOT:
                         #The unary operator
                         newContents[i+1] = newContents[i+1].negate()
-                        #Processesed
+                        #We Processesed the negation, so remove it
                         newContents.pop(i)
                     else:
                         #Grab our operands
