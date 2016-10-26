@@ -92,7 +92,7 @@ negationDict = {
 }
 
 def negationMapping(i):
-    if isinstance(i,Clause):
+    if isinstance(i,CNFClause):
         return i.negate()
     else:
         return negationDict[i]
@@ -100,7 +100,10 @@ def negationMapping(i):
 class CNFClause(Clause):
     #A marked, valid clause in CNF
     def negate(self):
-        self.contents = list(map(negationMapping, self.contents))
+        return Clause(list(map(negationMapping, self.contents))).toCNF()
+
+    def toCNF(self):
+        return self
 
 
 class Literal(CNFClause):
@@ -122,7 +125,6 @@ class Literal(CNFClause):
 a = Literal('a')
 b = Literal('b')
 c = Literal('c')
-level = Clause([b,operators.OR,c])
-topLevel = Clause([a,operators.AND,level])
-print(topLevel.toCNF())
-
+k = Clause([b, operators.AND, c])
+level = Clause([a, operators.NOT, k])
+print(level.toCNF())
