@@ -46,6 +46,22 @@ class Clause:
         onlyLiterals = all(map(lambda x: isinstance(x, Literal), filter(lambda y: isinstance(y,Clause), cnts)))
         return onlyAnds or (onlyOrs and onlyLiterals)
 
+    def resolveEquivalence(self, cnts):
+        done = False
+        while not done:
+            try:
+                i = cnts.index(operators.IMPLIES)
+                operands = [cnts.pop(i-1) for e in range(3)]
+                operands.pop(1)
+                newClauses = []
+                newClauses.append(Clause([operands[0],operators.IMPLIES,operands[1]]))
+                newClauses.append(operators.AND)
+                newClauses.append(Clause([operands[1],operators.IMPLIES,operands[0]]))
+                cnts.insert(i, Clause(newClauses).toCNF())
+            except ValueError:
+                done = True
+        return cnts
+
     def resolveImplies(self, cnts):
         done = False
         while not done:
