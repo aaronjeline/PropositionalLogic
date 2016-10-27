@@ -100,8 +100,7 @@ class Clause:
         if self.simpleCNFCheck(newContents):
             return CNFClause(newContents)
         # Now we have to manipulate symbols
-        # First eliminate all negations
-        newContents = self.resolveNegations(newContents)
+        newContents = self.resolveEquivalence(self.resolveImplies(self.resolveNegations(newContents)))
         if not self.simpleCNFCheck(newContents):
             # We have more resolution to do!
             pass
