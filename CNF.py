@@ -46,6 +46,36 @@ class Clause:
         onlyLiterals = all(map(lambda x: isinstance(x, Literal), filter(lambda y: isinstance(y,Clause), cnts)))
         return onlyAnds or (onlyOrs and onlyLiterals)
 
+    def resolveImplies(self, cnts):
+        done = False
+        while not done:
+            try:
+                i = cnts.index(operators.IMPLIES)
+                #Grab the operands and remove the operator
+                operands = [cnts.pop(i-1) for e in range(3)]
+                operands.pop(1)
+                newClause = Clause([operands[0].negate(), operators.OR, operands[1]]).toCNF()
+                cnts.insert(i, newClause)
+            except ValueError:
+                #No more implies
+                done = TypeError
+        return cnts
+
+
+
+    def resolveNegations(self, cnts):
+        done = False
+        while not done:
+            try:
+                #Get the next not
+                i = cnts.index(operators.NOT)
+                cnts[i+1] = cnts[i+1].negate()
+                cnts.pop(i)
+            except ValueError:
+                #No more nots
+                done = True
+        return cnts
+
     def toCNF(self):
         #Simple check to see if we are a literal
         if isinstance(self, Literal):
@@ -57,16 +87,7 @@ class Clause:
             return CNFClause(newContents)
         #Now we have to manipulate symbols
         #First eliminate all negations
-        done = False
-        while not done:
-            try:
-                #Get the next not
-                i = newContents.index(operators.NOT)
-                newContents[i+1] = newContents[i+1].negate()
-                newContents.pop(i)
-            except ValueError:
-                #No more nots
-                done = True
+        newContents = self.resolveNegations(newContents)
         if not self.simpleCNFCheck(newContents):
             #We have more resolution to do!
             pass
@@ -130,6 +151,6 @@ class Literal(CNFClause):
 a = Literal('a')
 b = Literal('b')
 c = Literal('c')
-k = Clause([b, operators.AND, c])
+k = Clause([b, operators.IMPLIES, c])
 level = Clause([a, operators.AND, operators.NOT, k])
-print(level.toCNF())
+print(k.resolveImplies(k.contents))
