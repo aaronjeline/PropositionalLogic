@@ -8,6 +8,7 @@ class operators(Enum):
     IMPLIES = 3
     EQUALS = 4
 
+
 def conversion(item):
     if isinstance(item, Clause):
         return item.toCNF()
@@ -15,22 +16,21 @@ def conversion(item):
         return item
 
 
-
-
 class Clause:
     contents = None
     awaitingNegation = None
+
     def __init__(self, contents, awaitingNegation=False):
         self.awaitingNegation = awaitingNegation
         self.contents = contents
 
     def toLiteral(self):
-        #Strip all not's out of the contents, keep them in a seperate list
-        nots = list(filter(lambda x: x==operators.NOT,self.contents))
+        # Strip all not's out of the contents, keep them in a seperate list
+        nots = list(filter(lambda x: x == operators.NOT, self.contents))
         newContents = list(filter(lambda x: x not in nots, self.contents))
-        #If there is more than one String left, it's not a literal
-        if (len(newContents)==1) and (isinstance(newContents[0],str)):
-            #It's a literal
+        # If there is more than one String left, it's not a literal
+        if (len(newContents) == 1) and (isinstance(newContents[0], str)):
+            # It's a literal
             symbol = newContents[0]
             sign = len(nots) % 2 == 0
             if self.awaitingNegation:
@@ -39,11 +39,11 @@ class Clause:
         else:
             return self
 
-    def simpleCNFCheck(self,cnts):
+    def simpleCNFCheck(self, cnts):
         isCNF = False
-        onlyAnds = all(map(lambda x: x==operators.AND, filter(lambda y: isinstance(y, operators), cnts)))
-        onlyOrs = all(map(lambda x: x==operators.OR, filter(lambda y: isinstance(y, operators), cnts)))
-        onlyLiterals = all(map(lambda x: isinstance(x, Literal), filter(lambda y: isinstance(y,Clause), cnts)))
+        onlyAnds = all(map(lambda x: x == operators.AND, filter(lambda y: isinstance(y, operators), cnts)))
+        onlyOrs = all(map(lambda x: x == operators.OR, filter(lambda y: isinstance(y, operators), cnts)))
+        onlyLiterals = all(map(lambda x: isinstance(x, Literal), filter(lambda y: isinstance(y, Clause), cnts)))
         return onlyAnds or (onlyOrs and onlyLiterals)
 
     def resolveEquivalence(self, cnts):
@@ -51,12 +51,12 @@ class Clause:
         while not done:
             try:
                 i = cnts.index(operators.IMPLIES)
-                operands = [cnts.pop(i-1) for e in range(3)]
+                operands = [cnts.pop(i - 1) for e in range(3)]
                 operands.pop(1)
                 newClauses = []
-                newClauses.append(Clause([operands[0],operators.IMPLIES,operands[1]]))
+                newClauses.append(Clause([operands[0], operators.IMPLIES, operands[1]]))
                 newClauses.append(operators.AND)
-                newClauses.append(Clause([operands[1],operators.IMPLIES,operands[0]]))
+                newClauses.append(Clause([operands[1], operators.IMPLIES, operands[0]]))
                 cnts.insert(i, Clause(newClauses).toCNF())
             except ValueError:
                 done = True
@@ -67,52 +67,46 @@ class Clause:
         while not done:
             try:
                 i = cnts.index(operators.IMPLIES)
-                #Grab the operands and remove the operator
-                operands = [cnts.pop(i-1) for e in range(3)]
+                # Grab the operands and remove the operator
+                operands = [cnts.pop(i - 1) for e in range(3)]
                 operands.pop(1)
                 newClause = Clause([operands[0].negate(), operators.OR, operands[1]]).toCNF()
                 cnts.insert(i, newClause)
             except ValueError:
-                #No more implies
+                # No more implies
                 done = TypeError
         return cnts
-
-
 
     def resolveNegations(self, cnts):
         done = False
         while not done:
             try:
-                #Get the next not
+                # Get the next not
                 i = cnts.index(operators.NOT)
-                cnts[i+1] = cnts[i+1].negate()
+                cnts[i + 1] = cnts[i + 1].negate()
                 cnts.pop(i)
             except ValueError:
-                #No more nots
+                # No more nots
                 done = True
         return cnts
 
     def toCNF(self):
-        #Simple check to see if we are a literal
+        # Simple check to see if we are a literal
         if isinstance(self, Literal):
             return self
-        #Now we have more work to do
-        #Convert all sub-clauses to CNF (yay recursion)
-        newContents = list(map(lambda x:conversion(x),self.contents))
+        # Now we have more work to do
+        # Convert all sub-clauses to CNF (yay recursion)
+        newContents = list(map(lambda x: conversion(x), self.contents))
         if self.simpleCNFCheck(newContents):
             return CNFClause(newContents)
-        #Now we have to manipulate symbols
-        #First eliminate all negations
+        # Now we have to manipulate symbols
+        # First eliminate all negations
         newContents = self.resolveNegations(newContents)
         if not self.simpleCNFCheck(newContents):
-            #We have more resolution to do!
+            # We have more resolution to do!
             pass
-        #Done!
+        # Done!
         return CNFClause(newContents)
-
-
-
-
 
     def __str__(self):
         st = ""
@@ -124,23 +118,25 @@ class Clause:
                 st += str(i)
         return st
 
-
     def negate(self):
         self.awaitingNegation = not self.awaitingNegation
 
+
 negationDict = {
-    operators.AND:operators.OR,
-    operators.OR:operators.AND
+    operators.AND: operators.OR,
+    operators.OR: operators.AND
 }
 
+
 def negationMapping(i):
-    if isinstance(i,CNFClause):
+    if isinstance(i, CNFClause):
         return i.negate()
     else:
         return negationDict[i]
 
+
 class CNFClause(Clause):
-    #A marked, valid clause in CNF
+    # A marked, valid clause in CNF
     def negate(self):
         return Clause(list(map(negationMapping, self.contents))).toCNF()
 
@@ -151,9 +147,10 @@ class CNFClause(Clause):
 class Literal(CNFClause):
     symbol = None
     sign = None
+
     def __init__(self, symbol, sign=True):
         self.symbol = symbol
-        self.sign =sign
+        self.sign = sign
 
     def negate(self):
         return Literal(self.symbol, not self.sign)
@@ -163,6 +160,7 @@ class Literal(CNFClause):
             return self.symbol
         else:
             return '-' + self.symbol
+
 
 a = Literal('a')
 b = Literal('b')
