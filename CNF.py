@@ -115,6 +115,7 @@ class Clause:
                 st += t
             else:
                 st += str(i)
+            st += " "
         return st
 
     def negate(self):
