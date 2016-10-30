@@ -85,35 +85,46 @@ class Clause:
     def isAssociable(self):
         return self.only(operators.OR, operators)
 
-    def distributeOr(self, cnts):
-        done = False
+    def associateOr(self, cnts):
         try:
-            i = cnts.index(operators.OR)
-            operands = [cnts.pop(i - 1) for e in range(3)]
-            operands.pop(1)
-            for i in range(2):
-                if operands[1].isAssociable():
-                    new = [operands[0], operators.OR]
-                    if isinstance(operands[1], Literal):
-                        new.append(operands[1])
-                    else:
-                        new.extend(operands[1].contents)
-                    cnts[i:i] = new
-                else:
-                    #We need to actually distribute
-                    clauses = filter(lambda x: isinstance(x, CNFClause), operands[1].contents)
-                    newClause = []
-                    for i in clauses:
-                        newClause.append(Clause([operands[0], operators.OR, i]).toCNF())
-                        newClause.append(operators.AND)
-                    #Remove the last AND
-                    newClause.pop()
-                    cnts.insert(i, Clause(newClause).toCNF())
-                #Flip the operands and do it again!
-                operands = operands[::-1]
-        except ValueError:
+            orLocations = filter(lambda x: cnts[x]==operators.OR, range(len(cnts)))
+            for i in orLocations:
+                operands = [cnts.pop(i -1) for e in range(3)]
+                operands.pop(1)
+                #Remap our operands to operand/boolean pairs to mark which we've resolved
+                operands = list(map(lambda x: (x,False), operands))
+                for j in range(len(operands)):
+                    if operands[j][0].isAssociable():
+                        operands[j] = (operands[j][0].contents, True)
+                #Map operands back for convenience
+                operands = list(map(lambda x: x[0], operands))
+                newClause = operands[0]
+                newClause.append(operators.OR)
+                newClause.extend(operands[1])
+                cnts.insert(i, Clause(newClause).toCNF())
+        except IndexError:
             pass
+        if len(cnts) == 1 and isinstance(cnts[0], CNFClause):
+            cnts = cnts[0].contents
         return cnts
+
+    def distributeOr(self, cnts):
+        orLocations = filter(lambda x: cnts[x]==operators.OR, range(len(cnts)))
+        for i in orLocations:
+            operands = [cnts.pop(i-1) for e in range(3)]
+            operands.pop(1)
+            subs = list(map(lambda x: x.getSubPairs, operands))
+            newClause = []
+            for i in subs[0]:
+                for j in subs[1]:
+                    newPair = Clause([i, operators.OR, j]).toCNF()
+                    newClause.extend([newPair, operators.AND])
+            #Remove the last AND
+            newClause.pop()
+            cnts.insert(i, Clause(newClause).toCNF())
+        return cnts
+
+
 
 
     def resolveNegations(self, cnts):
@@ -142,7 +153,7 @@ class Clause:
         newContents = self.resolveImplies(self.resolveEquivalence(self.resolveNegations(newContents)))
 
         while not self.simpleCNFCheck(newContents):
-            newContents = self.distributeOr(newContents)
+            newContents = self.distributeOr(self.associateOr(newContents))
 
         # Done!
         return CNFClause(newContents)
@@ -183,6 +194,10 @@ class CNFClause(Clause):
     def toCNF(self):
         return self
 
+    # Get pairs for distributing ors
+    def getSubPairs(self):
+        return list(filter(lambda x: not isinstance(x, operators), self.contents))
+
 
 
 
@@ -194,13 +209,16 @@ class Literal(CNFClause):
     def __init__(self, symbol, sign=True):
         self.symbol = symbol
         self.sign = sign
-        self.contents = self
+        self.contents = [self]
 
     def negate(self):
         return Literal(self.symbol, not self.sign)
 
     def isAssociable(self):
         return True
+
+    def getSubPairs(self):
+        return self
 
     def __str__(self):
         if self.sign:
