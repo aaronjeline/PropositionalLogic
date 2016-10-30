@@ -41,7 +41,7 @@ class Clause:
 
     def only(self, thing, type, list=None):
         if list == None:
-            list = self
+            list = self.contents
         return all(map(lambda x: x==thing, filter(lambda y: isinstance(y,type), list)))
 
     def simpleCNFCheck(self, cnts):
@@ -87,19 +87,18 @@ class Clause:
 
     def distributeOr(self, cnts):
         done = False
-        while not done:
-            try:
-                i = cnts.index(operators.OR)
-                operands = [cnts.pop(i - 1) for e in range(3)]
-                operands.pop(1)
+        try:
+            i = cnts.index(operators.OR)
+            operands = [cnts.pop(i - 1) for e in range(3)]
+            operands.pop(1)
+            for i in range(2):
                 if operands[1].isAssociable():
+                    new = [operands[0], operators.OR]
                     if isinstance(operands[1], Literal):
-                        cnts.insert(i, operands[1])
+                        new.append(operands[1])
                     else:
-                        for j in operands[1].contents[::-1]:
-                            cnts.insert(i, j)
-                    cnts.insert(i, operands.OR)
-                    cnts.insert(i, operands[0])
+                        new.extend(operands[1].contents)
+                    cnts[i:i] = new
                 else:
                     #We need to actually distribute
                     clauses = filter(lambda x: isinstance(x, CNFClause), operands[1].contents)
@@ -110,8 +109,10 @@ class Clause:
                     #Remove the last AND
                     newClause.pop()
                     cnts.insert(i, Clause(newClause).toCNF())
-            except ValueError:
-                done = True
+                #Flip the operands and do it again!
+                operands = operands[::-1]
+        except ValueError:
+            pass
         return cnts
 
 
@@ -138,9 +139,10 @@ class Clause:
         if self.simpleCNFCheck(newContents):
             return CNFClause(newContents)
         # Now we have to manipulate symbols
-        newContents = \
-            self.distributeOr(self.resolveImplies(self.resolveEquivalence(self.resolveNegations(newContents))))
+        newContents = self.resolveImplies(self.resolveEquivalence(self.resolveNegations(newContents)))
 
+        while not self.simpleCNFCheck(newContents):
+            newContents = self.distributeOr(newContents)
 
         # Done!
         return CNFClause(newContents)
