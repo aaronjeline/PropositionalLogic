@@ -18,10 +18,8 @@ def conversion(item):
 
 class Clause:
     contents = None
-    awaitingNegation = None
 
-    def __init__(self, contents, awaitingNegation=False):
-        self.awaitingNegation = awaitingNegation
+    def __init__(self, contents):
         if len(contents) == 1 and isinstance(contents[0], Clause):
             self.contents = contents[0].contents
         else:
@@ -149,9 +147,6 @@ class Clause:
         return cnts
 
     def toCNF(self):
-        # Simple check to see if we are a literal
-        if isinstance(self, Literal):
-            return self
         # Now we have more work to do
         # Convert all sub-clauses to CNF (yay recursion)
         newContents = list(map(lambda x: conversion(x), self.contents))
@@ -240,6 +235,10 @@ class Literal(CNFClause):
 a = Literal('a')
 b = Literal('b')
 c = Literal('c')
+d = Literal('d')
 low = Clause([b, operators.OR, c])
 high = Clause([a, operators.EQUALS, low])
+one = Clause([d, operators.AND, c])
+two = Clause([a, operators.OR, b])
+three = Clause([one, operators.IMPLIES, two])
 print(high.toCNF())
