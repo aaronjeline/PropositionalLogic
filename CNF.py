@@ -22,7 +22,10 @@ class Clause:
 
     def __init__(self, contents, awaitingNegation=False):
         self.awaitingNegation = awaitingNegation
-        self.contents = contents
+        if len(contents) == 1 and isinstance(contents[0], Clause):
+            self.contents = contents[0].contents
+        else:
+            self.contents = contents
 
     def toLiteral(self):
         # Strip all not's out of the contents, keep them in a seperate list
@@ -96,32 +99,37 @@ class Clause:
                 for j in range(len(operands)):
                     if operands[j][0].isAssociable():
                         operands[j] = (operands[j][0].contents, True)
+                    else:
+                        operands[j] = ([operands[j][0]], False)
                 #Map operands back for convenience
                 operands = list(map(lambda x: x[0], operands))
                 newClause = operands[0]
                 newClause.append(operators.OR)
                 newClause.extend(operands[1])
-                cnts.insert(i, Clause(newClause).toCNF())
+                cnts.insert(i, Clause(newClause))
         except IndexError:
             pass
-        if len(cnts) == 1 and isinstance(cnts[0], CNFClause):
+        if len(cnts) == 1 and isinstance(cnts[0], Clause):
             cnts = cnts[0].contents
         return cnts
 
     def distributeOr(self, cnts):
-        orLocations = filter(lambda x: cnts[x]==operators.OR, range(len(cnts)))
-        for i in orLocations:
-            operands = [cnts.pop(i-1) for e in range(3)]
-            operands.pop(1)
-            subs = list(map(lambda x: x.getSubPairs, operands))
-            newClause = []
-            for i in subs[0]:
-                for j in subs[1]:
-                    newPair = Clause([i, operators.OR, j]).toCNF()
-                    newClause.extend([newPair, operators.AND])
-            #Remove the last AND
-            newClause.pop()
-            cnts.insert(i, Clause(newClause).toCNF())
+        try:
+            orLocations = filter(lambda x: cnts[x]==operators.OR, range(len(cnts)))
+            for i in orLocations:
+                operands = [cnts.pop(i-1) for e in range(3)]
+                operands.pop(1)
+                subs = list(map(lambda x:x.getSubPairs(), operands))
+                newClause = []
+                for j in subs[0]:
+                    for k in subs[1]:
+                        newPair = Clause([j, operators.OR, k]).toCNF()
+                        newClause.extend([newPair, operators.AND])
+                #Remove the last AND
+                newClause.pop()
+                cnts.insert(i, Clause(newClause).toCNF())
+        except IndexError:
+            pass
         return cnts
 
 
@@ -153,7 +161,9 @@ class Clause:
         newContents = self.resolveImplies(self.resolveEquivalence(self.resolveNegations(newContents)))
 
         while not self.simpleCNFCheck(newContents):
-            newContents = self.distributeOr(self.associateOr(newContents))
+            newContents = self.associateOr(newContents)
+            if not self.simpleCNFCheck(newContents):
+                newContents = self.distributeOr(newContents)
 
         # Done!
         return CNFClause(newContents)
@@ -218,7 +228,7 @@ class Literal(CNFClause):
         return True
 
     def getSubPairs(self):
-        return self
+        return [self]
 
     def __str__(self):
         if self.sign:
